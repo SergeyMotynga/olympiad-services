@@ -1,16 +1,32 @@
+from asyncio import CancelledError
 from collections.abc import AsyncIterator
 from datetime import datetime, timedelta
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import grpc
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from olympiad_access.api.grpc import serve_access
 from olympiad_contracts.access_pb2 import CheckAccessRequest
 from olympiad_contracts.access_pb2_grpc import AccessServiceStub
 from olympiad_runtime.repositories.database import build_engine
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("startup_error", [RuntimeError, CancelledError])
+async def test_grpc_server_stops_when_startup_fails(startup_error: type[BaseException]) -> None:
+    server = MagicMock(spec=grpc.aio.Server)
+    server.start.side_effect = startup_error
+    engine = MagicMock(spec=AsyncEngine)
+
+    with patch("grpc.aio.server", return_value=server), pytest.raises(startup_error):
+        async with serve_access(engine, "127.0.0.1:0"):
+            pytest.fail("Сервер не должен перейти к приёму запросов после сбоя запуска.")
+
+    server.stop.assert_awaited_once()
 
 
 @pytest_asyncio.fixture

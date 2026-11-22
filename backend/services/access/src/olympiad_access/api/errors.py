@@ -1,6 +1,8 @@
 """Ответы HTTP для ошибок сервиса доступа."""
 
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 from olympiad_access.exceptions.access import (
     AccessError,
@@ -10,6 +12,16 @@ from olympiad_access.exceptions.access import (
     InvalidAccountData,
     InvalidCredentials,
 )
+
+
+async def request_validation_error(
+    _request: Request, error: RequestValidationError
+) -> JSONResponse:
+    """Возвращает местоположение, тип и сообщение без входных данных."""
+    detail = [
+        {"loc": item["loc"], "type": item["type"], "msg": item["msg"]} for item in error.errors()
+    ]
+    return JSONResponse(status_code=422, content={"detail": detail})
 
 
 def unauthorized(message: str) -> HTTPException:

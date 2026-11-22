@@ -5,6 +5,16 @@ from httpx import AsyncClient
 
 
 @pytest.mark.asyncio
+async def test_login_validation_exposes_only_error_details(client: AsyncClient) -> None:
+    response = await client.post("/auth/login", json={})
+
+    assert response.status_code == 422
+    errors = response.json()["detail"]
+    assert {tuple(error["loc"]) for error in errors} == {("body", "login"), ("body", "password")}
+    assert all(set(error) == {"loc", "type", "msg"} for error in errors)
+
+
+@pytest.mark.asyncio
 async def test_login_creates_an_independent_week_long_session(
     client: AsyncClient, admin_account: tuple[str, str]
 ) -> None:

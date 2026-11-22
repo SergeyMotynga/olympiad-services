@@ -40,10 +40,10 @@ class AccessServicer:
 async def serve_access(engine: AsyncEngine, address: str) -> AsyncIterator[int]:
     """Поднимает сервер на заданном адресе и освобождает порт при остановке."""
     server = grpc.aio.server()
-    add_AccessServiceServicer_to_server(AccessServicer(engine), server)  # type: ignore[no-untyped-call]
-    port = server.add_insecure_port(address)
-    await server.start()
     try:
+        add_AccessServiceServicer_to_server(AccessServicer(engine), server)  # type: ignore[no-untyped-call]
+        port = server.add_insecure_port(address)
+        await server.start()
         yield port
     finally:
         await server.stop(grace=3)
