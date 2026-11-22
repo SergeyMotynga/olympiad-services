@@ -21,3 +21,11 @@ class Principal:
 
     account_id: UUID
     role: RoleCode
+
+
+@dataclass(frozen=True)
+class CurrentAccount:
+    """Аккаунт действующей сессии и доступные ему операции."""
+
+    account_id: UUID
+    operations: tuple[str, ...]

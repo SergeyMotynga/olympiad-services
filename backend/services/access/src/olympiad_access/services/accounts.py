@@ -5,6 +5,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from olympiad_access.core.security import hash_password
+from olympiad_access.domain.permissions import CHANGE_ACCOUNT_ROLE, CREATE_ACCOUNT
 from olympiad_access.domain.roles import RoleCode
 from olympiad_access.exceptions.access import (
     AccountNotFound,
@@ -42,7 +43,7 @@ class AccountService:
     async def create_account(self, token: str, login: str, password: str, role_id: int) -> Account:
         """Создаёт аккаунт с назначенной администратором ролью."""
         async with self.db.begin():
-            await self.auth.require_admin(token)
+            await self.auth.require_operation(token, CREATE_ACCOUNT)
             normalized_login = normalize_login(login)
             await self._ensure_role(role_id)
             password_hash = await hash_password(validate_password(password))
@@ -54,7 +55,7 @@ class AccountService:
     async def change_role(self, token: str, account_id: UUID, role_id: int) -> Account:
         """Меняет роль аккаунта. Существующие сессии используют новое значение."""
         async with self.db.begin():
-            await self.auth.require_admin(token)
+            await self.auth.require_operation(token, CHANGE_ACCOUNT_ROLE)
             await self._ensure_role(role_id)
             account = await self.accounts.update_role(account_id, role_id)
             if account is None:

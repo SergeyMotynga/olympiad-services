@@ -1,8 +1,12 @@
 """Ответы HTTP для ошибок сервиса доступа."""
 
-from fastapi import HTTPException, Request
+from http import HTTPStatus
+
+from fastapi import HTTPException, Request, Response
+from fastapi.exception_handlers import http_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from olympiad_access.exceptions.access import (
     AccessError,
@@ -12,6 +16,14 @@ from olympiad_access.exceptions.access import (
     InvalidAccountData,
     InvalidCredentials,
 )
+
+
+async def public_http_error(request: Request, error: StarletteHTTPException) -> Response:
+    """Запрещает кешировать 404, поскольку доступ может измениться после смены роли."""
+    response = await http_exception_handler(request, error)
+    if error.status_code == HTTPStatus.NOT_FOUND:
+        response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 async def request_validation_error(
@@ -33,10 +45,8 @@ def account_error(error: AccessError) -> HTTPException:
     """Преобразует ошибку работы с аккаунтом или ролью в ответ HTTP."""
     if isinstance(error, InvalidCredentials):
         return unauthorized("Сессия недействительна.")
-    if isinstance(error, Forbidden):
-        return HTTPException(403, str(error))
-    if isinstance(error, AccountNotFound):
-        return HTTPException(404, str(error))
+    if isinstance(error, Forbidden | AccountNotFound):
+        return HTTPException(HTTPStatus.NOT_FOUND, HTTPStatus.NOT_FOUND.phrase)
     if isinstance(error, DuplicateLogin):
         return HTTPException(409, str(error))
     if isinstance(error, InvalidAccountData):

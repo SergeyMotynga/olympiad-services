@@ -6,8 +6,9 @@ from secrets import token_urlsafe
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from olympiad_access.core.security import hash_token, verify_password
+from olympiad_access.domain.permissions import allowed_operations, allows_operation
 from olympiad_access.domain.roles import RoleCode
-from olympiad_access.dto.auth import IssuedSession, Principal
+from olympiad_access.dto.auth import CurrentAccount, IssuedSession, Principal
 from olympiad_access.exceptions.access import Forbidden, InvalidAccountData, InvalidCredentials
 from olympiad_access.repositories.accounts import AccountRepository
 from olympiad_access.repositories.sessions import SessionRepository
@@ -60,10 +61,21 @@ class AuthService:
         account_id, code = account
         return Principal(account_id, RoleCode(code))
 
-    async def require_admin(self, token: str) -> None:
-        """Проверяет, что текущая сессия принадлежит администратору."""
+    async def current_account(self, token: str) -> CurrentAccount:
+        """Возвращает текущий аккаунт и операции, разрешённые его ролью."""
+        async with self.db.begin():
+            principal = await self._require_principal(token)
+        return CurrentAccount(principal.account_id, allowed_operations(principal.role))
+
+    async def _require_principal(self, token: str) -> Principal:
+        """Требует действующую сессию и возвращает её владельца."""
         principal = await self.get_principal(token)
         if principal is None:
             raise InvalidCredentials()
-        if principal.role != RoleCode.ADMIN:
-            raise Forbidden("Операция доступна администратору.")
+        return principal
+
+    async def require_operation(self, token: str, operation: str) -> None:
+        """Проверяет право аккаунта на операцию в текущей транзакции."""
+        principal = await self._require_principal(token)
+        if not allows_operation(principal.role, operation):
+            raise Forbidden()

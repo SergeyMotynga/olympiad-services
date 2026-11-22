@@ -1,13 +1,26 @@
-"""Маршруты входа и выхода."""
+"""Маршруты входа, выхода и текущей сессии."""
 
 from fastapi import APIRouter, Response
 
 from olympiad_access.api.deps import Auth, Token
 from olympiad_access.api.errors import unauthorized
 from olympiad_access.exceptions.access import InvalidCredentials
-from olympiad_access.schemas.auth import Credentials, TokenResponse
+from olympiad_access.schemas.auth import Credentials, CurrentAccountResponse, TokenResponse
 
 router = APIRouter(prefix="/auth", tags=["Сессии"])
+
+
+@router.get("/me")
+async def current_account_route(
+    service: Auth, token: Token, response: Response
+) -> CurrentAccountResponse:
+    """Возвращает текущий аккаунт и доступные операции."""
+    try:
+        account = await service.current_account(token)
+    except InvalidCredentials as error:
+        raise unauthorized("Сессия недействительна.") from error
+    response.headers["Cache-Control"] = "no-store"
+    return CurrentAccountResponse(account_id=account.account_id, operations=account.operations)
 
 
 @router.post("/login")

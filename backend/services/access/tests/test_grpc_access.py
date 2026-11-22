@@ -101,3 +101,8 @@ async def test_check_access_rejects_session_at_expiration(
         reply = await access_stub.CheckAccess(request, timeout=5)
         assert not reply.allowed
         assert not reply.account_id
+        expired = await client.get(
+            "/auth/me", headers={"Authorization": f"Bearer {session['access_token']}"}
+        )
+        assert expired.status_code == 401
+        assert expired.headers["www-authenticate"] == "Bearer"

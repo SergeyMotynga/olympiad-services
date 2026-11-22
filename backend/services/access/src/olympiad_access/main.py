@@ -6,8 +6,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from sqlalchemy.ext.asyncio import AsyncEngine
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from olympiad_access.api.errors import request_validation_error
+from olympiad_access.api.errors import public_http_error, request_validation_error
 from olympiad_access.api.grpc import serve_access
 from olympiad_access.api.router import api_router
 from olympiad_access.core.config import AccessSettings
@@ -28,5 +29,6 @@ async def access_lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = create_app("Доступ и роли", app_lifespan=access_lifespan)
+app.exception_handler(StarletteHTTPException)(public_http_error)
 app.exception_handler(RequestValidationError)(request_validation_error)
 app.include_router(api_router)

@@ -21,8 +21,20 @@ async def test_only_admin_can_create_accounts(
     )
     assert author.status_code == 200
     author_headers = {"Authorization": f"Bearer {author.json()['access_token']}"}
-    assert (await client.post("/accounts", json=body, headers=author_headers)).status_code == 403
-    assert (await client.get("/roles", headers=author_headers)).status_code == 403
+    profile = await client.get("/auth/me", headers=author_headers)
+    assert profile.status_code == 200
+    assert profile.json() == {
+        "account_id": created.json()["id"],
+        "operations": ["tasks:create", "tasks:list", "tasks:update"],
+    }
+    expected = await client.get("/unknown-route", headers=author_headers)
+    create_denied = await client.post("/accounts", json=body, headers=author_headers)
+    invalid_denied = await client.post("/accounts", json={}, headers=author_headers)
+    roles_denied = await client.get("/roles", headers=author_headers)
+    for denied in (create_denied, invalid_denied, roles_denied):
+        assert denied.status_code == expected.status_code == 404
+        assert denied.json() == expected.json()
+        assert denied.headers["cache-control"] == expected.headers["cache-control"] == "no-store"
 
     another_admin = await client.post(
         "/accounts",
@@ -47,15 +59,32 @@ async def test_role_changes_apply_to_existing_sessions(
     assert created.status_code == 201
     account_id = created.json()["id"]
     logged_in = await client.post("/auth/login", json=credentials)
+    assert logged_in.status_code == 200
     session = {"Authorization": f"Bearer {logged_in.json()['access_token']}"}
+    before = await client.get("/auth/me", headers=session)
+    assert before.status_code == 200
+    assert before.json() == {"account_id": account_id, "operations": []}
     path = f"/accounts/{account_id}/role"
-    assert (
-        await client.patch(path, json={"role_id": role_ids["admin"]}, headers=session)
-    ).status_code == 403
+    denied = await client.patch(path, json={"role_id": role_ids["admin"]}, headers=session)
+    missing = await client.patch(
+        "/accounts/00000000-0000-0000-0000-000000000000/role",
+        json={"role_id": role_ids["admin"]},
+        headers=admin_headers,
+    )
+    assert denied.status_code == missing.status_code == 404
+    assert denied.json() == missing.json() == {"detail": "Not Found"}
 
     changed = await client.patch(path, json={"role_id": role_ids["admin"]}, headers=admin_headers)
     assert changed.status_code == 200
     assert changed.json()["role_id"] == role_ids["admin"]
+
+    after = await client.get("/auth/me", headers=session)
+    assert after.status_code == 200
+    assert after.json()["account_id"] == account_id
+    assert {"roles:list", "accounts:create", "accounts:change_role"} <= set(
+        after.json()["operations"]
+    )
+    assert (await client.get("/roles", headers=session)).status_code == 200
 
     new_account = {
         "login": "new.author",
