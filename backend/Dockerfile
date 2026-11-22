@@ -11,16 +11,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 COPY pyproject.toml uv.lock .python-version ./
 COPY runtime ./runtime
-COPY access ./access
-COPY tasks-print ./tasks-print
-COPY submissions ./submissions
+COPY services ./services
 COPY migrations ./migrations
 
 ARG SERVICE
 ARG APP_MODULE
 RUN uv sync --locked --no-dev --package "olympiad-${SERVICE}"
 
-WORKDIR /app/${SERVICE}
+WORKDIR /app/services/${SERVICE}
 ENV APP_MODULE=${APP_MODULE}
 EXPOSE 8000
 CMD ["sh", "-c", "alembic upgrade head && exec uvicorn \"$APP_MODULE\" --host 0.0.0.0 --port 8000"]

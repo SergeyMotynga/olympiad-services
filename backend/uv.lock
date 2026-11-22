@@ -375,7 +375,7 @@ wheels = [
 [[package]]
 name = "olympiad-access"
 version = "0.1.0"
-source = { editable = "access" }
+source = { editable = "services/access" }
 dependencies = [
     { name = "olympiad-runtime" },
 ]
@@ -438,7 +438,7 @@ requires-dist = [
 [[package]]
 name = "olympiad-submissions"
 version = "0.1.0"
-source = { editable = "submissions" }
+source = { editable = "services/submissions" }
 dependencies = [
     { name = "olympiad-runtime" },
 ]
@@ -449,7 +449,7 @@ requires-dist = [{ name = "olympiad-runtime", editable = "runtime" }]
 [[package]]
 name = "olympiad-tasks-print"
 version = "0.1.0"
-source = { editable = "tasks-print" }
+source = { editable = "services/tasks-print" }
 dependencies = [
     { name = "olympiad-runtime" },
 ]
