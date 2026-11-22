@@ -12,6 +12,8 @@ jobs:
     name: Проверки Python
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      ACCESS_TEST_DATABASE_URL: postgresql+asyncpg://access_test_app:access_test@127.0.0.1:55432/access_test
     defaults:
       run:
         working-directory: backend
@@ -24,6 +26,10 @@ jobs:
         with:
           version: "0.12.7"
           working-directory: backend
+      - name: Сгенерировать gRPC-контракт
+        run: uv run --locked --all-packages --group codegen python generate_contracts.py
+      - name: Запустить тестовый PostgreSQL
+        run: docker compose -f ../compose.access-test.yaml up -d --wait --wait-timeout 90
       - name: Проверить поведение
         run: uv run --locked --all-packages pytest
       - name: Проверить формат и стиль

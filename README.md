@@ -22,18 +22,21 @@ Compose поднимает три приложения и PostgreSQL. При п�
 
 Команда `docker compose ps` показывает состояние контейнеров, а `docker compose down` останавливает их с сохранением данных. PostgreSQL доступен внутри сети Compose. Учётные данные в конфигурации используются для локального запуска.
 
+[Проверка сервиса доступа в Swagger](docs/backend/access/review.md)
+
 ## Проверки бэкенда
 
 Если локально уже установлен `uv`, запусти из каталога `backend/`.
 
 ```sh
+uv run --locked --all-packages --group codegen python generate_contracts.py
 uv run --locked --all-packages pytest
 uv run --locked --all-packages ruff check .
 uv run --locked --all-packages ruff format --check .
 uv run --locked --all-packages mypy .
 ```
 
-Тесты `/ready` в `backend/tests/` направляют приложения на недоступный адрес и проверяют ответ `503`. GitHub Actions также запускает Compose в отдельном окружении со свежим томом PostgreSQL. Эта проверка запускает миграции и ждёт готовности всех трёх сервисов.
+Тесты `/ready` в `backend/tests/` направляют приложения на недоступный адрес и проверяют ответ `503`. GitHub Actions также запускает Compose в отдельном окружении со свежим томом PostgreSQL. Эта проверка запускает миграции и ждёт готовности всех трёх сервисов. Интеграционные тесты доступа используют отдельную базу по адресу ACCESS_TEST_DATABASE_URL. [Как запустить тестовую БД](docs/backend/access/review.md#интеграционные-тесты).
 
 ## Как устроен бэкенд
 

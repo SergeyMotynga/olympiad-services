@@ -1,5 +1,5 @@
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from collections.abc import AsyncIterator, Callable
+from contextlib import AbstractAsyncContextManager, asynccontextmanager
 
 from fastapi import FastAPI
 
@@ -19,8 +19,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await engine.dispose()
 
 
-def create_app(title: str) -> FastAPI:
+def create_app(
+    title: str,
+    *,
+    app_lifespan: Callable[[FastAPI], AbstractAsyncContextManager[None]] = lifespan,
+) -> FastAPI:
     """Создаёт приложение с проверкой готовности."""
-    app = FastAPI(title=title, lifespan=lifespan)
+    app = FastAPI(title=title, lifespan=app_lifespan)
     app.include_router(readiness_router)
     return app

@@ -5,3 +5,7 @@ __pycache__/
 .ruff_cache/
 .coverage
 .env
+
+/backend/contracts/src/olympiad_contracts/*_pb2.py
+/backend/contracts/src/olympiad_contracts/*_pb2.pyi
+/backend/contracts/src/olympiad_contracts/*_pb2_grpc.py

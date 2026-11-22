@@ -11,12 +11,18 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 COPY pyproject.toml uv.lock .python-version ./
 COPY runtime ./runtime
+COPY contracts ./contracts
+COPY generate_contracts.py .
 COPY services ./services
 COPY migrations ./migrations
 
 ARG SERVICE
 ARG APP_MODULE
-RUN uv sync --locked --no-dev --package "olympiad-${SERVICE}"
+RUN if [ "$SERVICE" = "access" ]; then \
+        uv sync --locked --no-dev --only-group codegen \
+        && python generate_contracts.py; \
+    fi \
+    && uv sync --locked --no-dev --package "olympiad-${SERVICE}"
 
 WORKDIR /app/services/${SERVICE}
 ENV APP_MODULE=${APP_MODULE}

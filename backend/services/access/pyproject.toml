@@ -2,9 +2,10 @@
 name = "olympiad-access"
 version = "0.1.0"
 requires-python = ">=3.12,<3.13"
-dependencies = ["olympiad-runtime"]
+dependencies = ["olympiad-runtime", "olympiad-contracts", "bcrypt==4.3.0"]
 
 [tool.uv.sources]
+olympiad-contracts = { workspace = true }
 olympiad-runtime = { workspace = true }
 
 [build-system]
