@@ -1,0 +1,12 @@
+[project]
+name = "olympiad-access"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+dependencies = ["olympiad-runtime"]
+
+[tool.uv.sources]
+olympiad-runtime = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.12.7,<0.13.0"]
+build-backend = "uv_build"

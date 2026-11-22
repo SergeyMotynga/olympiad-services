@@ -1,0 +1,48 @@
+name: Backend CI
+
+on:
+  pull_request:
+    branches: [develop]
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: Проверки Python
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Установить uv
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+        with:
+          version: "0.12.7"
+          working-directory: backend
+      - name: Проверить поведение
+        run: uv run --locked --all-packages pytest
+      - name: Проверить формат и стиль
+        run: |
+          uv run --locked --all-packages ruff check .
+          uv run --locked --all-packages ruff format --check .
+      - name: Проверить типы
+        run: uv run --locked --all-packages mypy .
+
+  compose:
+    name: Запуск сервисов
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Собрать и запустить сервисы
+        run: docker compose up --build --wait --wait-timeout 120
+      - name: Вывести логи при сбое
+        if: failure()
+        run: docker compose logs --no-color

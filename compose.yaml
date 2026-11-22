@@ -1,0 +1,64 @@
+name: olympiad-services
+
+x-backend: &backend
+  depends_on:
+    postgres:
+      condition: service_healthy
+  healthcheck:
+    test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/ready', timeout=4).close()"]
+    interval: 3s
+    timeout: 5s
+    retries: 10
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres_local
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./backend/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  access:
+    <<: *backend
+    build:
+      context: ./backend
+      args:
+        SERVICE: access
+        APP_MODULE: olympiad_access.main:app
+    environment:
+      DATABASE_URL: postgresql+asyncpg://access_app:access_local@postgres:5432/access
+    ports:
+      - "127.0.0.1:8001:8000"
+
+  tasks-print:
+    <<: *backend
+    build:
+      context: ./backend
+      args:
+        SERVICE: tasks-print
+        APP_MODULE: olympiad_tasks_print.main:app
+    environment:
+      DATABASE_URL: postgresql+asyncpg://tasks_print_app:tasks_print_local@postgres:5432/tasks_print
+    ports:
+      - "127.0.0.1:8002:8000"
+
+  submissions:
+    <<: *backend
+    build:
+      context: ./backend
+      args:
+        SERVICE: submissions
+        APP_MODULE: olympiad_submissions.main:app
+    environment:
+      DATABASE_URL: postgresql+asyncpg://submissions_app:submissions_local@postgres:5432/submissions
+    ports:
+      - "127.0.0.1:8003:8000"
+
+volumes:
+  pg_data:
