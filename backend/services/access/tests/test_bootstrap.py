@@ -15,17 +15,30 @@ def test_bootstrap_creates_only_the_first_admin(empty_accounts: None, database_u
         sys.executable,
         "-m",
         "olympiad_access.bootstrap",
-        "--login",
-        "First.Admin",
         "--password-stdin",
     ]
-    env = {**os.environ, "DATABASE_URL": database_url}
+    env = {**os.environ, "DATABASE_URL": database_url, "PYTHONIOENCODING": "utf-8"}
 
-    first = subprocess.run(command, env=env, input="first-admin-pass\n", text=True, check=False)
-    second = subprocess.run(command, env=env, input="second-admin-pass\n", text=True, check=False)
+    first = subprocess.run(
+        [*command, "--login", "First.Admin"],
+        env=env,
+        input="first-admin-pass\n",
+        encoding="utf-8",
+        capture_output=True,
+        check=False,
+    )
+    second = subprocess.run(
+        [*command, "--login", "Second.Admin"],
+        env=env,
+        input="second-admin-pass\n",
+        encoding="utf-8",
+        capture_output=True,
+        check=False,
+    )
 
-    assert first.returncode == 0
-    assert second.returncode != 0
+    assert first.returncode == 0, first.stderr
+    assert second.returncode == 1
+    assert second.stderr.strip() == "Аккаунт администратора уже существует."
 
 
 @pytest.mark.asyncio
