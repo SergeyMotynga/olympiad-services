@@ -47,6 +47,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Подготовить пароли PostgreSQL для этого запуска
+        run: |
+          umask 077
+          for name in POSTGRES_PASSWORD ACCESS_DB_PASSWORD TASKS_PRINT_DB_PASSWORD SUBMISSIONS_DB_PASSWORD; do
+            printf '%s=%s\n' "$name" "$(openssl rand -hex 24)"
+          done > .env
       - name: Собрать и запустить сервисы
         run: docker compose up --build --wait --wait-timeout 120
       - name: Вывести логи при сбое

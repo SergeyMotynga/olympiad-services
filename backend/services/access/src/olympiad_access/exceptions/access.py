@@ -1,13 +1,4 @@
-"""Роли аккаунтов и ошибки сервиса доступа."""
-
-from enum import StrEnum
-
-
-class RoleCode(StrEnum):
-    ADMIN = "admin"
-    AUTHOR = "author"
-    REPRESENTATIVE = "representative"
-    REVIEWER = "reviewer"
+"""Ошибки сценариев сервиса доступа."""
 
 
 class AccessError(Exception):

@@ -7,7 +7,7 @@ from olympiad_runtime.config import Settings
 
 def run_migrations() -> None:
     """Применяет ревизии к базе выбранного сервиса."""
-    database_url = context.config.attributes.get("database_url") or Settings().database_url
+    database_url = context.config.attributes.get("database_url") or Settings().connection_url
     url = make_url(database_url).set(drivername="postgresql+psycopg")
     if context.is_offline_mode():
         context.configure(url=url, literal_binds=True, dialect_opts={"paramstyle": "named"})

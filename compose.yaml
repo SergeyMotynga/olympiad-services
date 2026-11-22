@@ -14,7 +14,10 @@ services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_PASSWORD: postgres_local
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Заполни POSTGRES_PASSWORD в .env}"
+      ACCESS_DB_PASSWORD: "${ACCESS_DB_PASSWORD:?Заполни ACCESS_DB_PASSWORD в .env}"
+      TASKS_PRINT_DB_PASSWORD: "${TASKS_PRINT_DB_PASSWORD:?Заполни TASKS_PRINT_DB_PASSWORD в .env}"
+      SUBMISSIONS_DB_PASSWORD: "${SUBMISSIONS_DB_PASSWORD:?Заполни SUBMISSIONS_DB_PASSWORD в .env}"
     volumes:
       - pg_data:/var/lib/postgresql/data
       - ./backend/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -32,7 +35,9 @@ services:
         SERVICE: access
         APP_MODULE: olympiad_access.main:app
     environment:
-      DATABASE_URL: postgresql+asyncpg://access_app:access_local@postgres:5432/access
+      DATABASE_NAME: access
+      DATABASE_USER: access_app
+      DATABASE_PASSWORD: "${ACCESS_DB_PASSWORD:?Заполни ACCESS_DB_PASSWORD в .env}"
       ACCESS_GRPC_ADDRESS: "0.0.0.0:50051"
     expose: ["50051"]
     ports:
@@ -46,7 +51,9 @@ services:
         SERVICE: tasks-print
         APP_MODULE: olympiad_tasks_print.main:app
     environment:
-      DATABASE_URL: postgresql+asyncpg://tasks_print_app:tasks_print_local@postgres:5432/tasks_print
+      DATABASE_NAME: tasks_print
+      DATABASE_USER: tasks_print_app
+      DATABASE_PASSWORD: "${TASKS_PRINT_DB_PASSWORD:?Заполни TASKS_PRINT_DB_PASSWORD в .env}"
     ports:
       - "127.0.0.1:8002:8000"
 
@@ -58,7 +65,9 @@ services:
         SERVICE: submissions
         APP_MODULE: olympiad_submissions.main:app
     environment:
-      DATABASE_URL: postgresql+asyncpg://submissions_app:submissions_local@postgres:5432/submissions
+      DATABASE_NAME: submissions
+      DATABASE_USER: submissions_app
+      DATABASE_PASSWORD: "${SUBMISSIONS_DB_PASSWORD:?Заполни SUBMISSIONS_DB_PASSWORD в .env}"
     ports:
       - "127.0.0.1:8003:8000"
 

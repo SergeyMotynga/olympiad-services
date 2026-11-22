@@ -4,7 +4,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from olympiad_access.domain import RoleCode
+from olympiad_access.domain.roles import RoleCode
 from olympiad_access.services.auth import get_principal
 
 OPERATIONS = {

@@ -84,3 +84,11 @@ async def admin_headers(client: AsyncClient, admin_account: tuple[str, str]) -> 
     response = await client.post("/auth/login", json={"login": login, "password": password})
     assert response.status_code == 200
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+
+@pytest_asyncio.fixture
+async def role_ids(client: AsyncClient, admin_headers: dict[str, str]) -> dict[str, int]:
+    """Читает идентификаторы ролей, которые показывает Swagger."""
+    response = await client.get("/roles", headers=admin_headers)
+    assert response.status_code == 200
+    return {role["code"]: role["id"] for role in response.json()}

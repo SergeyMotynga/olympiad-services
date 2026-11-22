@@ -7,7 +7,7 @@ from getpass import getpass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from olympiad_access.domain import AccessError
+from olympiad_access.exceptions.access import AccessError
 from olympiad_access.services.accounts import bootstrap_admin
 from olympiad_runtime.config import Settings
 from olympiad_runtime.repositories.database import build_engine
@@ -15,7 +15,7 @@ from olympiad_runtime.repositories.database import build_engine
 
 async def create_first_admin(login: str, password: str) -> None:
     """Открывает соединение с базой на время создания аккаунта."""
-    engine = build_engine(Settings().database_url)
+    engine = build_engine(Settings().connection_url)
     try:
         async with AsyncSession(engine) as db:
             await bootstrap_admin(db, login, password)
@@ -29,9 +29,10 @@ def main() -> None:
     parser.add_argument("--login", required=True, help="Логин администратора.")
     parser.add_argument("--password-stdin", action="store_true", help="Прочитать пароль из stdin.")
     args = parser.parse_args()
-    password = (
-        sys.stdin.readline().removesuffix("\n") if args.password_stdin else getpass("Пароль: ")
-    )
+    if args.password_stdin:
+        password = sys.stdin.readline().removesuffix("\r\n").removesuffix("\n")
+    else:
+        password = getpass("Пароль: ")
     try:
         run(create_first_admin(args.login, password))
     except AccessError as error:

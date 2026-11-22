@@ -11,7 +11,7 @@ from olympiad_runtime.repositories.database import build_engine
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Создаёт пул соединений и освобождает его при остановке."""
-    engine = build_engine(Settings().database_url)
+    engine = build_engine(Settings().connection_url)
     app.state.database = engine
     try:
         yield

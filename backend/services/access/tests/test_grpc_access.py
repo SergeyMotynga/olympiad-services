@@ -2,7 +2,7 @@ import grpc
 import pytest
 from httpx import AsyncClient
 
-from olympiad_access.grpc_server import serve_access
+from olympiad_access.api.grpc import serve_access
 from olympiad_contracts.access_pb2 import CheckAccessRequest
 from olympiad_contracts.access_pb2_grpc import AccessServiceStub
 from olympiad_runtime.repositories.database import build_engine
@@ -10,11 +10,11 @@ from olympiad_runtime.repositories.database import build_engine
 
 @pytest.mark.asyncio
 async def test_check_access_uses_current_role(
-    client: AsyncClient, admin_headers: dict[str, str], database_url: str
+    client: AsyncClient, admin_headers: dict[str, str], database_url: str, role_ids: dict[str, int]
 ) -> None:
     credentials = {"login": "print.author", "password": "author-pass"}
     created = await client.post(
-        "/accounts", json={**credentials, "role": "author"}, headers=admin_headers
+        "/accounts", json={**credentials, "role_id": role_ids["author"]}, headers=admin_headers
     )
     assert created.status_code == 201
     account_id = created.json()["id"]
@@ -35,7 +35,7 @@ async def test_check_access_uses_current_role(
 
             changed = await client.patch(
                 f"/accounts/{account_id}/role",
-                json={"role": "representative"},
+                json={"role_id": role_ids["representative"]},
                 headers=admin_headers,
             )
             assert changed.status_code == 200

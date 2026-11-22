@@ -1,30 +1,23 @@
 """Вход и хранение сессий."""
 
-from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from secrets import token_urlsafe
-from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from olympiad_access.domain import InvalidAccountData, InvalidCredentials, RoleCode
-from olympiad_access.repositories import (
-    find_account_by_login,
+from olympiad_access.core.security import hash_token, verify_password
+from olympiad_access.domain.roles import RoleCode
+from olympiad_access.dto.auth import IssuedSession, Principal
+from olympiad_access.exceptions.access import InvalidAccountData, InvalidCredentials
+from olympiad_access.repositories.accounts import find_account_by_login
+from olympiad_access.repositories.sessions import (
     find_session_account,
     insert_session,
     revoke_session,
 )
-from olympiad_access.security import hash_token, normalize_login, verify_password
+from olympiad_access.validators.credentials import normalize_login
 
 SESSION_TTL = timedelta(days=7)
-
-
-@dataclass(frozen=True)
-class IssuedSession:
-    """Однократно выдаваемый токен и срок его действия."""
-
-    access_token: str
-    expires_at: datetime
 
 
 async def login(db: AsyncSession, login: str, password: str) -> IssuedSession:
@@ -55,14 +48,6 @@ async def logout(db: AsyncSession, token: str) -> None:
     async with db.begin():
         if not await revoke_session(db, hash_token(token), datetime.now(UTC)):
             raise InvalidCredentials()
-
-
-@dataclass(frozen=True)
-class Principal:
-    """Аккаунт и его актуальная роль для действующей сессии."""
-
-    account_id: UUID
-    role: RoleCode
 
 
 async def get_principal(db: AsyncSession, token: str) -> Principal | None:
