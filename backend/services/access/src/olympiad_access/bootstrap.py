@@ -8,7 +8,7 @@ from getpass import getpass
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from olympiad_access.exceptions.access import AccessError
-from olympiad_access.services.accounts import bootstrap_admin
+from olympiad_access.services.accounts import AccountService
 from olympiad_runtime.config import Settings
 from olympiad_runtime.repositories.database import build_engine
 
@@ -18,7 +18,7 @@ async def create_first_admin(login: str, password: str) -> None:
     engine = build_engine(Settings().connection_url)
     try:
         async with AsyncSession(engine) as db:
-            await bootstrap_admin(db, login, password)
+            await AccountService(db).bootstrap_admin(login, password)
     finally:
         await engine.dispose()
 

@@ -8,6 +8,9 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from olympiad_access.api.errors import unauthorized
+from olympiad_access.services.accounts import AccountService
+from olympiad_access.services.auth import AuthService
+from olympiad_access.services.roles import RoleService
 
 bearer = HTTPBearer(auto_error=False)
 
@@ -30,3 +33,23 @@ def require_token(
 
 Database = Annotated[AsyncSession, Depends(open_session)]
 Token = Annotated[str, Depends(require_token)]
+
+
+def get_auth_service(db: Database) -> AuthService:
+    """Создаёт сервис сессий для запроса."""
+    return AuthService(db)
+
+
+def get_account_service(db: Database) -> AccountService:
+    """Создаёт сервис управления аккаунтами для запроса."""
+    return AccountService(db)
+
+
+def get_role_service(db: Database) -> RoleService:
+    """Создаёт сервис справочника для запроса."""
+    return RoleService(db)
+
+
+Auth = Annotated[AuthService, Depends(get_auth_service)]
+Accounts = Annotated[AccountService, Depends(get_account_service)]
+Roles = Annotated[RoleService, Depends(get_role_service)]

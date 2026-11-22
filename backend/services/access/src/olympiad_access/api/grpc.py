@@ -8,7 +8,7 @@ import grpc
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
-from olympiad_access.services.access import check_access
+from olympiad_access.services.access import AccessService
 from olympiad_contracts.access_pb2 import CheckAccessRequest, CheckAccessResponse
 from olympiad_contracts.access_pb2_grpc import add_AccessServiceServicer_to_server
 
@@ -25,7 +25,9 @@ class AccessServicer:
         """Читает актуальную роль и возвращает решение."""
         try:
             async with timeout(3), AsyncSession(self.engine) as db:
-                account_id = await check_access(db, request.session_token, request.operation)
+                account_id = await AccessService(db).check_access(
+                    request.session_token, request.operation
+                )
         except (SQLAlchemyError, OSError, TimeoutError):
             await context.abort(grpc.StatusCode.UNAVAILABLE, "Сервис доступа недоступен.")
             raise
