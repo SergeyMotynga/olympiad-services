@@ -44,6 +44,31 @@ async def access_stub(database_url: str) -> AsyncIterator[AccessServiceStub]:
 
 
 @pytest.mark.asyncio
+async def test_check_access_rejects_unknown_operation(
+    admin_headers: dict[str, str], access_stub: AccessServiceStub
+) -> None:
+    token = admin_headers["Authorization"].removeprefix("Bearer ")
+    request = CheckAccessRequest(session_token=token, operation="tasks:unknown")
+
+    reply = await access_stub.CheckAccess(request, timeout=5)
+
+    assert not reply.allowed
+    assert not reply.account_id
+
+
+@pytest.mark.asyncio
+async def test_check_access_rejects_unknown_token(
+    empty_accounts: None, access_stub: AccessServiceStub
+) -> None:
+    request = CheckAccessRequest(session_token="unknown-session-token", operation="tasks:print")
+
+    reply = await access_stub.CheckAccess(request, timeout=5)
+
+    assert not reply.allowed
+    assert not reply.account_id
+
+
+@pytest.mark.asyncio
 async def test_check_access_uses_current_role(
     client: AsyncClient,
     admin_headers: dict[str, str],
