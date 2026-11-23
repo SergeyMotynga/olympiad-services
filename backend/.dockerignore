@@ -5,3 +5,8 @@
 **/.ruff_cache/
 **/.coverage
 **/tests/
+
+
+contracts/src/olympiad_contracts/*_pb2.py
+contracts/src/olympiad_contracts/*_pb2.pyi
+contracts/src/olympiad_contracts/*_pb2_grpc.py

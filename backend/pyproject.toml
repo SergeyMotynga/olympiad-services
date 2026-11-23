@@ -4,6 +4,7 @@ version = "0.1.0"
 requires-python = ">=3.12,<3.13"
 
 [dependency-groups]
+codegen = ["grpcio-tools>=1.85.3"]
 dev = [
     "httpx>=0.28.1",
     "mypy>=2.3.1",
@@ -17,7 +18,7 @@ dev = [
 package = false
 
 [tool.uv.workspace]
-members = ["services/*", "runtime"]
+members = ["services/*", "runtime", "contracts"]
 
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "function"
@@ -26,7 +27,8 @@ addopts = ["--strict-markers", "--strict-config"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["services/*/src", "runtime/src"]
+extend-exclude = ["*_pb2.py", "*_pb2.pyi", "*_pb2_grpc.py"]
+src = ["services/*/src", "runtime/src", "contracts/src"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM"]
@@ -34,5 +36,14 @@ select = ["E", "F", "I", "B", "UP", "SIM"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
+exclude = ["_pb2(?:_grpc)?[.]pyi?$"]
 plugins = ["pydantic.mypy"]
 warn_unreachable = true
+
+[[tool.mypy.overrides]]
+module = ["grpc", "grpc.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["olympiad_contracts.access_pb2_grpc"]
+follow_imports = "silent"

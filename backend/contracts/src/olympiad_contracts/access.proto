@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package olympiad.access.v1;
+
+// Проверка токена сессии и доступа к операции.
+service AccessService {
+  rpc CheckAccess(CheckAccessRequest) returns (CheckAccessResponse);
+}
+
+message CheckAccessRequest {
+  string session_token = 1;
+  string operation = 2;
+}
+
+message CheckAccessResponse {
+  bool allowed = 1;
+  // UUID аккаунта. Заполняется при разрешённой операции.
+  string account_id = 2;
+}

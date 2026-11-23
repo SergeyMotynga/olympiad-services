@@ -1,5 +1,5 @@
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from collections.abc import AsyncIterator, Callable
+from contextlib import AbstractAsyncContextManager, asynccontextmanager
 
 from fastapi import FastAPI
 
@@ -11,7 +11,7 @@ from olympiad_runtime.repositories.database import build_engine
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Создаёт пул соединений и освобождает его при остановке."""
-    engine = build_engine(Settings().database_url)
+    engine = build_engine(Settings().connection_url)
     app.state.database = engine
     try:
         yield
@@ -19,8 +19,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await engine.dispose()
 
 
-def create_app(title: str) -> FastAPI:
+def create_app(
+    title: str,
+    *,
+    app_lifespan: Callable[[FastAPI], AbstractAsyncContextManager[None]] = lifespan,
+) -> FastAPI:
     """Создаёт приложение с проверкой готовности."""
-    app = FastAPI(title=title, lifespan=lifespan)
+    app = FastAPI(title=title, lifespan=app_lifespan)
     app.include_router(readiness_router)
     return app
