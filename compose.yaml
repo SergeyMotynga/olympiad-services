@@ -11,6 +11,20 @@ x-backend: &backend
     retries: 10
 
 services:
+  frontend:
+    build: ./frontend
+    depends_on:
+      access:
+        condition: service_healthy
+        restart: true
+    ports:
+      - "127.0.0.1:5173:80"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   postgres:
     image: postgres:17-alpine
     environment:
