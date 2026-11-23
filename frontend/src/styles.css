@@ -94,7 +94,7 @@ code { overflow-wrap: anywhere; }
 }
 .sidebar .brand { padding-inline: 8px; }
 .sidebar nav { display: grid; gap: 7px; }
-.sidebar nav button {
+.sidebar nav a {
   display: flex;
   align-items: center;
   gap: 11px;
@@ -104,9 +104,10 @@ code { overflow-wrap: anywhere; }
   background: none;
   color: #c3d3c8;
   text-align: left;
+  text-decoration: none;
 }
-.sidebar nav button span { font-size: 1.15rem; line-height: 1; }
-.sidebar nav button:hover, .sidebar nav button[aria-current] { background: #304237; color: #e6ffce; }
+.sidebar nav a span { font-size: 1.15rem; line-height: 1; }
+.sidebar nav a:hover, .sidebar nav a[aria-current] { background: #304237; color: #e6ffce; }
 .sidebar-footer {
   display: flex;
   align-items: center;
@@ -229,6 +230,7 @@ input, select {
 .primary:hover:not(:disabled) { background: #2b5b40; }
 .secondary { border-color: var(--line); background: white; color: var(--green); }
 .secondary:hover:not(:disabled) { background: #eef5e8; }
+.back-link { margin-top: 16px; text-decoration: none; }
 
 @media (max-width: 960px) {
   .workspace { grid-template-columns: 184px minmax(0, 1fr); }
@@ -245,7 +247,7 @@ input, select {
   .sidebar { position: static; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 14px; padding: 13px 18px; }
   .sidebar .brand { padding: 0; }
   .sidebar nav { display: flex; flex-wrap: wrap; }
-  .sidebar nav button { padding: 8px 10px; }
+  .sidebar nav a { padding: 8px 10px; }
   .sidebar-footer { display: none; }
   .topbar { min-height: 61px; }
   .hero .geometry { width: 64%; right: -12%; opacity: .24; }

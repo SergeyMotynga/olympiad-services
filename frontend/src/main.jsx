@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useEffectEvent, useState } from 'react'
 import { createRoot } from 'react-dom/client'
+import { BrowserRouter, Link, Navigate, NavLink, Route, Routes, useLocation, useMatch, useNavigate } from 'react-router'
 import { request } from './api'
 import './styles.css'
 
@@ -251,23 +252,26 @@ function Accounts({ account, roles, busy, run, send, refresh }) {
 }
 
 function App() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const accountsPage = Boolean(useMatch('/accounts'))
   const [session, setSession] = useState(readSession)
   const [account, setAccount] = useState(null)
   const [roles, setRoles] = useState([])
-  const [page, setPage] = useState('overview')
-  const [busy, setBusy] = useState(Boolean(session))
+  const [pendingCount, setPendingCount] = useState(0)
   const [error, setError] = useState('')
+  const showAccounts = Boolean(account?.operations.includes('roles:list'))
+  const busy = pendingCount > 0 || Boolean(session && !account && !error)
 
   function clearSession() {
     sessionStorage.removeItem(sessionKey)
     setSession(null)
     setAccount(null)
     setRoles([])
-    setPage('overview')
   }
 
   async function run(action) {
-    setBusy(true)
+    setPendingCount((count) => count + 1)
     setError('')
     try {
       await action()
@@ -275,7 +279,7 @@ function App() {
       if (session && failure.status === 401) clearSession()
       setError(failure.message)
     } finally {
-      setBusy(false)
+      setPendingCount((count) => count - 1)
     }
   }
 
@@ -288,7 +292,6 @@ function App() {
     setAccount(current)
     if (!current.operations.includes('roles:list')) {
       setRoles([])
-      setPage('overview')
     }
     return current
   }
@@ -297,8 +300,12 @@ function App() {
     return loadAccount(session)
   }
 
-  useEffect(() => {
+  const restore = useEffectEvent(() => {
     if (session) run(refresh)
+  })
+
+  useEffect(() => {
+    restore()
   }, [])
 
   function login(credentials) {
@@ -311,36 +318,53 @@ function App() {
     })
   }
 
-  function openAccounts() {
-    setPage('accounts')
+  const loadRoles = useEffectEvent(() => {
     run(async () => {
       const current = await refresh()
       if (current.operations.includes('roles:list')) setRoles(await send('/roles'))
     })
-  }
+  })
+
+  useEffect(() => {
+    if (accountsPage && showAccounts) loadRoles()
+  }, [accountsPage, showAccounts])
 
   function logout() {
     run(async () => {
       await send('/auth/logout', { method: 'POST' })
       clearSession()
+      navigate('/login', { replace: true })
     })
   }
 
-  if (!session) return <Login busy={busy} error={error} onLogin={login} />
+  if (!session) {
+    return (
+      <Routes>
+        <Route path="/login" element={<Login busy={busy} error={error} onLogin={login} />} />
+        <Route path="*" element={<Navigate to="/login" replace state={{ fromAccounts: accountsPage }} />} />
+      </Routes>
+    )
+  }
 
-  const showAccounts = account?.operations.includes('roles:list')
+  const afterLogin = location.state?.fromAccounts && showAccounts ? '/accounts' : '/overview'
+  const notFound = (
+    <section className="card">
+      <h1>Страница не найдена</h1>
+      <Link className="secondary back-link" to="/overview">Перейти к обзору</Link>
+    </section>
+  )
   return (
     <div className="workspace">
       <aside className="sidebar">
         <Brand />
         <nav aria-label="Кабинет">
-          <button aria-current={page === 'overview' ? 'page' : undefined} onClick={() => setPage('overview')} disabled={busy}>
+          <NavLink end to="/overview">
             <span aria-hidden="true">◈</span> Обзор
-          </button>
+          </NavLink>
           {showAccounts && (
-            <button aria-current={page === 'accounts' ? 'page' : undefined} onClick={openAccounts} disabled={busy}>
+            <NavLink end to="/accounts">
               <span aria-hidden="true">⊞</span> Аккаунты
-            </button>
+            </NavLink>
           )}
         </nav>
         <div className="sidebar-footer">
@@ -362,11 +386,18 @@ function App() {
               )}
             </div>
           )}
-          {account && page === 'overview' && (
-            <Overview account={account} session={session} onRefresh={() => run(refresh)} busy={busy} />
-          )}
-          {account && showAccounts && page === 'accounts' && (
-            <Accounts account={account} roles={roles} run={run} send={send} refresh={refresh} busy={busy} />
+          {account && (
+            <Routes>
+              <Route path="/" element={<Navigate to="/overview" replace />} />
+              <Route path="/login" element={<Navigate to={afterLogin} replace />} />
+              <Route path="/overview" element={
+                <Overview account={account} session={session} onRefresh={() => run(refresh)} busy={busy} />
+              } />
+              <Route path="/accounts" element={showAccounts ? (
+                <Accounts account={account} roles={roles} run={run} send={send} refresh={refresh} busy={busy} />
+              ) : notFound} />
+              <Route path="*" element={notFound} />
+            </Routes>
           )}
         </div>
       </main>
@@ -374,4 +405,6 @@ function App() {
   )
 }
 
-createRoot(document.getElementById('root')).render(<App />)
+createRoot(document.getElementById('root')).render(
+  <BrowserRouter><App /></BrowserRouter>,
+)
