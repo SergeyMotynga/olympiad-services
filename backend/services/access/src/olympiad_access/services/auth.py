@@ -58,14 +58,19 @@ class AuthService:
         account = await self.sessions.find_session_account(hash_token(token), datetime.now(UTC))
         if account is None:
             return None
-        account_id, code = account
-        return Principal(account_id, RoleCode(code))
+        account_id, code, login, expires_at = account
+        return Principal(account_id, RoleCode(code), login, expires_at)
 
     async def current_account(self, token: str) -> CurrentAccount:
         """Возвращает текущий аккаунт и операции, разрешённые его ролью."""
         async with self.db.begin():
             principal = await self._require_principal(token)
-        return CurrentAccount(principal.account_id, allowed_operations(principal.role))
+        return CurrentAccount(
+            principal.account_id,
+            principal.login,
+            principal.expires_at,
+            allowed_operations(principal.role),
+        )
 
     async def _require_principal(self, token: str) -> Principal:
         """Требует действующую сессию и возвращает её владельца."""

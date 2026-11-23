@@ -23,10 +23,8 @@ async def test_only_admin_can_create_accounts(
     author_headers = {"Authorization": f"Bearer {author.json()['access_token']}"}
     profile = await client.get("/auth/me", headers=author_headers)
     assert profile.status_code == 200
-    assert profile.json() == {
-        "account_id": created.json()["id"],
-        "operations": ["tasks:create", "tasks:list", "tasks:update"],
-    }
+    assert profile.json()["account_id"] == created.json()["id"]
+    assert profile.json()["operations"] == ["tasks:create", "tasks:list", "tasks:update"]
     expected = await client.get("/unknown-route", headers=author_headers)
     create_denied = await client.post("/accounts", json=body, headers=author_headers)
     invalid_denied = await client.post("/accounts", json={}, headers=author_headers)
@@ -63,7 +61,8 @@ async def test_role_changes_apply_to_existing_sessions(
     session = {"Authorization": f"Bearer {logged_in.json()['access_token']}"}
     before = await client.get("/auth/me", headers=session)
     assert before.status_code == 200
-    assert before.json() == {"account_id": account_id, "operations": []}
+    assert before.json()["account_id"] == account_id
+    assert before.json()["operations"] == []
     path = f"/accounts/{account_id}/role"
     denied = await client.patch(path, json={"role_id": role_ids["admin"]}, headers=session)
     missing = await client.patch(

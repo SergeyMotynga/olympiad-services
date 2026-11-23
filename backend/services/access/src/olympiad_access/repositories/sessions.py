@@ -54,10 +54,10 @@ class SessionRepository:
 
     async def find_session_account(
         self, token_hash: bytes, now: datetime
-    ) -> tuple[UUID, str] | None:
+    ) -> tuple[UUID, str, str, datetime] | None:
         """Возвращает владельца действующей сессии и его текущую роль."""
         query = (
-            select(Account.id, Role.code)
+            select(Account.id, Role.code, Account.login, Session.expires_at)
             .select_from(Session)
             .join(Account, Account.id == Session.account_id)
             .join(Role, Role.id == Account.role_id)

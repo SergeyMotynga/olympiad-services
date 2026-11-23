@@ -20,4 +20,6 @@ class TokenResponse(BaseModel):
 
 class CurrentAccountResponse(BaseModel):
     account_id: UUID
+    login: str
+    expires_at: datetime
     operations: tuple[str, ...]

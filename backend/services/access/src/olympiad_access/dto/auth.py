@@ -21,6 +21,8 @@ class Principal:
 
     account_id: UUID
     role: RoleCode
+    login: str
+    expires_at: datetime
 
 
 @dataclass(frozen=True)
@@ -28,4 +30,6 @@ class CurrentAccount:
     """Аккаунт действующей сессии и доступные ему операции."""
 
     account_id: UUID
+    login: str
+    expires_at: datetime
     operations: tuple[str, ...]

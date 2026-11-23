@@ -5,6 +5,27 @@ from httpx import AsyncClient
 
 
 @pytest.mark.asyncio
+async def test_cabinet_restores_session_from_cookie(
+    client: AsyncClient, admin_account: tuple[str, str]
+) -> None:
+    login, password = admin_account
+    headers = {"X-Olympiad-Cabinet": "1"}
+    issued = await client.post(
+        "/auth/login", json={"login": login, "password": password}, headers=headers
+    )
+    assert issued.status_code == 200
+    assert "httponly" in issued.headers["set-cookie"].lower()
+
+    current = await client.get("/auth/me", headers=headers)
+    assert current.status_code == 200
+    assert current.json()["login"] == login
+    assert current.json()["expires_at"] == issued.json()["expires_at"]
+    assert (await client.post("/auth/logout")).status_code == 401
+    assert (await client.post("/auth/logout", headers=headers)).status_code == 204
+    assert (await client.get("/auth/me", headers=headers)).status_code == 401
+
+
+@pytest.mark.asyncio
 async def test_login_validation_exposes_only_error_details(client: AsyncClient) -> None:
     response = await client.post("/auth/login", json={})
 

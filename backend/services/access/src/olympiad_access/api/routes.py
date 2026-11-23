@@ -8,7 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
-from olympiad_access.api.deps import bearer, get_auth_service, require_token
+from olympiad_access.api.deps import bearer, get_auth_service, request_token
 from olympiad_access.api.errors import account_error
 from olympiad_access.exceptions.access import AccessError
 
@@ -24,7 +24,7 @@ class ProtectedWriteRoute(APIRoute):
                 return await handle(request)
             except RequestValidationError:
                 # При ошибке FastAPI не вызывает сценарий, где обычно проверяются права.
-                token = require_token(await bearer(request))
+                token = request_token(request, await bearer(request))
                 engine: AsyncEngine = request.app.state.database
                 try:
                     async with AsyncSession(engine) as db, db.begin():

@@ -5,9 +5,8 @@ export class ApiError extends Error {
   }
 }
 
-export async function request(path, { method = 'GET', token, body } = {}) {
-  const headers = { Accept: 'application/json' }
-  if (token) headers.Authorization = `Bearer ${token}`
+export async function request(path, { method = 'GET', body } = {}) {
+  const headers = { Accept: 'application/json', 'X-Olympiad-Cabinet': '1' }
   if (body !== undefined) headers['Content-Type'] = 'application/json'
 
   let response
@@ -28,7 +27,7 @@ export async function request(path, { method = 'GET', token, body } = {}) {
 
   const { detail } = await response.json().catch(() => ({}))
   const messages = {
-    401: token ? 'Сессия завершилась. Войди снова.' : 'Неверный логин или пароль.',
+    401: path === '/auth/login' ? 'Неверный логин или пароль.' : 'Сессия завершилась. Войди снова.',
     404: 'Не найдено.',
     422: 'Проверь значения в полях формы.',
   }

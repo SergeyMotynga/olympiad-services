@@ -13,6 +13,12 @@ from olympiad_access.services.auth import AuthService
 from olympiad_access.services.roles import RoleService
 
 bearer = HTTPBearer(auto_error=False)
+SESSION_COOKIE = "olympiad_session"
+
+
+def is_cabinet_request(request: Request) -> bool:
+    """Запросы кабинета с cookie требуют заголовок, недоступный обычной форме."""
+    return request.headers.get("X-Olympiad-Cabinet") == "1"
 
 
 async def open_session(request: Request) -> AsyncIterator[AsyncSession]:
@@ -32,7 +38,21 @@ def require_token(
 
 
 Database = Annotated[AsyncSession, Depends(open_session)]
-Token = Annotated[str, Depends(require_token)]
+
+
+def request_token(
+    request: Request,
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
+) -> str:
+    """Читает Bearer или сессию защищённого запроса кабинета."""
+    if credentials is None and is_cabinet_request(request):
+        token = request.cookies.get(SESSION_COOKIE)
+        if token:
+            return token
+    return require_token(credentials)
+
+
+Token = Annotated[str, Depends(request_token)]
 
 
 def get_auth_service(db: Database) -> AuthService:

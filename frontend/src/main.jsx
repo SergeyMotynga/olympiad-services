@@ -4,7 +4,6 @@ import { BrowserRouter, Link, Navigate, NavLink, Route, Routes, useLocation, use
 import { request } from './api'
 import './styles.css'
 
-const sessionKey = 'olympiad-access-session'
 const roleNames = {
   admin: 'Администратор',
   author: 'Составитель',
@@ -34,15 +33,6 @@ const dateFormat = new Intl.DateTimeFormat('ru', {
   dateStyle: 'long',
   timeStyle: 'short',
 })
-
-function readSession() {
-  try {
-    const saved = JSON.parse(sessionStorage.getItem(sessionKey))
-    return saved?.access_token ? saved : null
-  } catch {
-    return null
-  }
-}
 
 function Brand() {
   return (
@@ -99,7 +89,7 @@ function Login({ busy, error, onLogin }) {
   )
 }
 
-function Overview({ account, session, onRefresh, busy }) {
+function Overview({ account, onRefresh, busy }) {
   const known = new Set(Object.values(operationGroups).flatMap(Object.keys))
   const unknown = account.operations.filter((operation) => !known.has(operation))
   return (
@@ -116,7 +106,7 @@ function Overview({ account, session, onRefresh, busy }) {
         <div className="card session-card">
           <span className="caption">Сессия</span>
           <strong><span className="active-dot" /> Активна</strong>
-          <span className="muted">До {dateFormat.format(new Date(session.expires_at))}</span>
+          <span className="muted">До {dateFormat.format(new Date(account.expires_at))}</span>
         </div>
         <div className="card session-card">
           <span className="caption">Доступные операции</span>
@@ -125,7 +115,7 @@ function Overview({ account, session, onRefresh, busy }) {
         </div>
         <div className="card session-card">
           <span className="caption">Аккаунт</span>
-          <strong>{session.login}</strong>
+          <strong>{account.login}</strong>
           <code title={account.account_id}>{account.account_id}</code>
         </div>
       </div>
@@ -255,17 +245,15 @@ function App() {
   const location = useLocation()
   const navigate = useNavigate()
   const accountsPage = Boolean(useMatch('/accounts'))
-  const [session, setSession] = useState(readSession)
+  const [restoring, setRestoring] = useState(true)
   const [account, setAccount] = useState(null)
   const [roles, setRoles] = useState([])
   const [pendingCount, setPendingCount] = useState(0)
   const [error, setError] = useState('')
   const showAccounts = Boolean(account?.operations.includes('roles:list'))
-  const busy = pendingCount > 0 || Boolean(session && !account && !error)
+  const busy = pendingCount > 0
 
   function clearSession() {
-    sessionStorage.removeItem(sessionKey)
-    setSession(null)
     setAccount(null)
     setRoles([])
   }
@@ -276,19 +264,15 @@ function App() {
     try {
       await action()
     } catch (failure) {
-      if (session && failure.status === 401) clearSession()
+      if (account && failure.status === 401) clearSession()
       setError(failure.message)
     } finally {
       setPendingCount((count) => count - 1)
     }
   }
 
-  function send(path, options) {
-    return request(path, { ...options, token: session.access_token })
-  }
-
-  async function loadAccount(credentials) {
-    const current = await request('/auth/me', { token: credentials.access_token })
+  async function refresh() {
+    const current = await request('/auth/me')
     setAccount(current)
     if (!current.operations.includes('roles:list')) {
       setRoles([])
@@ -296,12 +280,14 @@ function App() {
     return current
   }
 
-  function refresh() {
-    return loadAccount(session)
-  }
-
-  const restore = useEffectEvent(() => {
-    if (session) run(refresh)
+  const restore = useEffectEvent(async () => {
+    try {
+      await refresh()
+    } catch (failure) {
+      if (failure.status !== 401) setError(failure.message)
+    } finally {
+      setRestoring(false)
+    }
   })
 
   useEffect(() => {
@@ -310,18 +296,15 @@ function App() {
 
   function login(credentials) {
     run(async () => {
-      const issued = await request('/auth/login', { method: 'POST', body: credentials })
-      const next = { ...issued, login: credentials.login.toLowerCase() }
-      sessionStorage.setItem(sessionKey, JSON.stringify(next))
-      setSession(next)
-      await loadAccount(next)
+      await request('/auth/login', { method: 'POST', body: credentials })
+      await refresh()
     })
   }
 
   const loadRoles = useEffectEvent(() => {
     run(async () => {
       const current = await refresh()
-      if (current.operations.includes('roles:list')) setRoles(await send('/roles'))
+      if (current.operations.includes('roles:list')) setRoles(await request('/roles'))
     })
   })
 
@@ -331,13 +314,15 @@ function App() {
 
   function logout() {
     run(async () => {
-      await send('/auth/logout', { method: 'POST' })
+      await request('/auth/logout', { method: 'POST' })
       clearSession()
       navigate('/login', { replace: true })
     })
   }
 
-  if (!session) {
+  if (restoring) return <p role="status">Проверяем сессию…</p>
+
+  if (!account) {
     return (
       <Routes>
         <Route path="/login" element={<Login busy={busy} error={error} onLogin={login} />} />
@@ -346,7 +331,9 @@ function App() {
     )
   }
 
-  const afterLogin = location.state?.fromAccounts && showAccounts ? '/accounts' : '/overview'
+  const fromAccounts =
+    location.state?.fromAccounts || new URLSearchParams(location.search).get('from') === 'accounts'
+  const afterLogin = fromAccounts && showAccounts ? '/accounts' : '/overview'
   const notFound = (
     <section className="card">
       <h1>Страница не найдена</h1>
@@ -368,8 +355,8 @@ function App() {
           )}
         </nav>
         <div className="sidebar-footer">
-          <span className="avatar" aria-hidden="true">{session.login.slice(0, 2).toUpperCase()}</span>
-          <span>{session.login}</span>
+          <span className="avatar" aria-hidden="true">{account.login.slice(0, 2).toUpperCase()}</span>
+          <span>{account.login}</span>
         </div>
       </aside>
       <main className="main">
@@ -379,26 +366,17 @@ function App() {
         </header>
         <div className="content">
           {error && <p className="notice error" role="alert">{error}</p>}
-          {!account && (
-            <div className="card">
-              {busy ? <p role="status">Проверяем сессию…</p> : (
-                <button className="secondary" onClick={() => run(refresh)}>Проверить сессию</button>
-              )}
-            </div>
-          )}
-          {account && (
-            <Routes>
-              <Route path="/" element={<Navigate to="/overview" replace />} />
-              <Route path="/login" element={<Navigate to={afterLogin} replace />} />
-              <Route path="/overview" element={
-                <Overview account={account} session={session} onRefresh={() => run(refresh)} busy={busy} />
-              } />
-              <Route path="/accounts" element={showAccounts ? (
-                <Accounts account={account} roles={roles} run={run} send={send} refresh={refresh} busy={busy} />
-              ) : notFound} />
-              <Route path="*" element={notFound} />
-            </Routes>
-          )}
+          <Routes>
+            <Route path="/" element={<Navigate to="/overview" replace />} />
+            <Route path="/login" element={<Navigate to={afterLogin} replace />} />
+            <Route path="/overview" element={
+              <Overview account={account} onRefresh={() => run(refresh)} busy={busy} />
+            } />
+            <Route path="/accounts" element={showAccounts ? (
+              <Accounts account={account} roles={roles} run={run} send={request} refresh={refresh} busy={busy} />
+            ) : notFound} />
+            <Route path="*" element={notFound} />
+          </Routes>
         </div>
       </main>
     </div>
